@@ -652,12 +652,3 @@ async function initApp() {
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
-ist(); renderPartsGrid();
-  } catch (e) {
-    console.error('[Frota] Falha ao carregar dados iniciais:', e);
-    const root = document.querySelector('#page-login .driver-list');
-    if (root) root.innerHTML = '<div class="readonly-note"><div class="readonly-note-icon">⚠️</div><div>Nao consegui conectar ao banco. Verifique a internet e atualize a pagina.</div></div>';
-  }
-}
-
-document.addEventListener('DOMContentLoaded', initApp);
