@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0d4f5c">
+  <meta name="description" content="Controle da frota de carros — Fernando de Noronha">
+
+  <title>Frota Noronha</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Fontes (Atkinson Hyperlegible + Fraunces) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:wght@600;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos do app -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Animação de erro de PIN -->
+  <style>
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-8px); }
+      40%,80% { transform: translateX(8px); }
+    }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Barra de status (topo) -->
+  <div class="statusbar">
+    <span>09:42</span>
+    <span class="net" id="netStatus"><span class="dot"></span> Online</span>
+  </div>
+
+  <!-- ==========================================
+       Página: Login (lista de motoristas)
+       ========================================== -->
+  <div class="page active" id="page-login">
+    <div class="login-hero">
+      <div class="logo-mark">Frota<span>.</span></div>
+      <div class="logo-tag">Controle da Frota</div>
+    </div>
+    <div class="content">
+      <p class="display">Bom dia!</p>
+      <p class="lead">Toque no seu nome para começar.</p>
+      <div class="driver-list">
+        <!-- Carregado dinamicamente do banco em app.js -->
+        <p class="lead" style="text-align:center; padding: 30px 0;">Carregando motoristas…</p>
+      </div>
+      <div id="newDriverInput" style="display:none; margin-top: 20px;">
+        <div class="field">
+          <label>Escreva seu nome completo</label>
+          <input type="text" id="newDriverName" placeholder="Ex: José Antônio Pereira" autocomplete="off">
+          <div class="hint">O gestor vai precisar te cadastrar depois. Por hoje, pode usar normal.</div>
+        </div>
+        <div class="stack">
+          <button class="btn btn-primary" onclick="selectNewDriver()">Continuar</button>
+          <button class="btn btn-secondary" onclick="hideNewDriverInput()">Voltar para a lista</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: PIN (senha de 4 dígitos)
+       ========================================== -->
+  <div class="page" id="page-pin">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-login')">←</button>
+      <div>
+        <h1 id="pinDriverName">João Silva</h1>
+        <div class="sub">Digite sua senha</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="pin-display" id="pinDisplay">
+        <div class="pin-dot"></div><div class="pin-dot"></div>
+        <div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div class="keypad">
+        <button class="key" onclick="pin('1')">1</button>
+        <button class="key" onclick="pin('2')">2</button>
+        <button class="key" onclick="pin('3')">3</button>
+        <button class="key" onclick="pin('4')">4</button>
+        <button class="key" onclick="pin('5')">5</button>
+        <button class="key" onclick="pin('6')">6</button>
+        <button class="key" onclick="pin('7')">7</button>
+        <button class="key" onclick="pin('8')">8</button>
+        <button class="key" onclick="pin('9')">9</button>
+        <button class="key action" onclick="pinClear()">Limpar</button>
+        <button class="key" onclick="pin('0')">0</button>
+        <button class="key action" onclick="pinBack()">⌫</button>
+      </div>
+      <p class="footer-help">Esqueceu? Fale com o gestor.</p>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Escolha do carro
+       ========================================== -->
+  <div class="page" id="page-selectcar">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-pin')">←</button>
+      <div>
+        <h1>Qual carro hoje?</h1>
+        <div class="sub">Escolha o carro que você vai usar</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="date-card">
+        <div class="date-icon">📅</div>
+        <div class="date-info">
+          <div class="label">Hoje é</div>
+          <div class="value" id="todayDate">domingo, 24 de maio</div>
+        </div>
+      </div>
+      <div class="car-grid">
+        <!-- Carregado dinamicamente do banco em app.js -->
+        <p class="lead" style="text-align:center;">Carregando carros…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Dashboard (motorista)
+       ========================================== -->
+  <div class="page" id="page-dash">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-selectcar')">←</button>
+      <div>
+        <h1>Olá, <span id="dashDriver">João</span></h1>
+        <div class="sub" id="dashSubDate">domingo, 24 de maio</div>
+      </div>
+    </div>
+    <div id="maintBannerHolder"></div>
+    <div class="content">
+      <div class="car-banner">
+        <div class="car-icon">🛻</div>
+        <div class="car-info">
+          <div class="car-plate" id="dashPlate">PEX-2A45</div>
+          <div class="car-model" id="dashModel">Hilux Branca</div>
+        </div>
+      </div>
+      <div class="offline-note" id="offlineNote" style="display:none">
+        <div class="offline-note-icon">📡</div>
+        <div>Você está <b>sem internet</b>. Pode usar normal — vou enviar tudo quando o sinal voltar.</div>
+      </div>
+      <div class="tiles">
+        <div class="tile" onclick="show('page-parts')">
+          <div class="tile-icon">🔧</div>
+          <div class="tile-label">Registrar serviço ou peça</div>
+        </div>
+        <div class="tile" onclick="show('page-alerts')">
+          <div class="tile-icon">🔔</div>
+          <div class="tile-label">Alertas</div>
+          <div class="tile-badge">3</div>
+        </div>
+        <div class="tile" onclick="show('page-history')">
+          <div class="tile-icon">📋</div>
+          <div class="tile-label">Histórico do carro</div>
+        </div>
+        <div class="tile" onclick="show('page-observation')">
+          <div class="tile-icon">💬</div>
+          <div class="tile-label">Mandar observação</div>
+        </div>
+        <div class="tile full" id="maintTile" onclick="show('page-maintenance')">
+          <div class="tile-icon">⚠️</div>
+          <div>
+            <div class="tile-label">Pôr o carro em manutenção</div>
+            <div class="tile-sub">Avisa o gestor por e-mail</div>
+          </div>
+        </div>
+      </div>
+      <p class="footer-help">Não consegue achar algo? <a href="#" onclick="event.preventDefault(); alert('Aqui apareceria o contato do gestor: (81) 9XXXX-XXXX')">Pedir ajuda</a></p>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Escolha de peça/serviço
+       ========================================== -->
+  <div class="page" id="page-parts">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-dash')">←</button>
+      <div>
+        <h1>O que você fez?</h1>
+        <div class="sub">Escolha a peça ou serviço</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="parts-grid">
+        <!-- Carregado dinamicamente do banco em app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Outro (peça/serviço livre)
+       ========================================== -->
+  <div class="page" id="page-other-part">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-parts')">←</button>
+      <div>
+        <h1>Qual peça ou serviço?</h1>
+        <div class="sub">Escreva o nome</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="field">
+        <label>Nome da peça ou serviço</label>
+        <input type="text" id="otherPartName" placeholder="Ex: Amortecedor traseiro" autocomplete="off">
+        <div class="hint">Escreva com suas palavras, do jeito que você falaria.</div>
+      </div>
+      <button class="btn btn-primary" onclick="confirmOtherPart()">Continuar</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Valor (R$)
+       ========================================== -->
+  <div class="page" id="page-cost">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-parts')">←</button>
+      <div>
+        <h1 id="costPartTitle">Óleo do motor</h1>
+        <div class="sub">Quanto custou?</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="cost-display">
+        <div class="cd-label">Valor</div>
+        <div class="cd-value"><span class="cur">R$</span><span id="costValue">0,00</span></div>
+      </div>
+      <div class="keypad">
+        <button class="key" onclick="costKey('1')">1</button>
+        <button class="key" onclick="costKey('2')">2</button>
+        <button class="key" onclick="costKey('3')">3</button>
+        <button class="key" onclick="costKey('4')">4</button>
+        <button class="key" onclick="costKey('5')">5</button>
+        <button class="key" onclick="costKey('6')">6</button>
+        <button class="key" onclick="costKey('7')">7</button>
+        <button class="key" onclick="costKey('8')">8</button>
+        <button class="key" onclick="costKey('9')">9</button>
+        <button class="key action" onclick="costClear()">Limpar</button>
+        <button class="key" onclick="costKey('0')">0</button>
+        <button class="key action" onclick="costBack()">⌫</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="show('page-cost-confirm')">Continuar</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Conferir (antes de salvar)
+       ========================================== -->
+  <div class="page" id="page-cost-confirm">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-cost')">←</button>
+      <div>
+        <h1>Conferir</h1>
+        <div class="sub">Está tudo certo?</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="list-section">
+        <div class="list-item">
+          <div class="li-icon">🔧</div>
+          <div class="li-content">
+            <div class="li-title" id="confirmPart">Óleo do motor</div>
+            <div class="li-meta">Serviço / peça</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="li-icon">💰</div>
+          <div class="li-content">
+            <div class="li-title"><span id="confirmCost">R$ 180,00</span></div>
+            <div class="li-meta">Valor pago</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="li-icon">🚗</div>
+          <div class="li-content">
+            <div class="li-title"><span id="confirmCar">PEX-2A45 — Hilux Branca</span></div>
+            <div class="li-meta">Carro</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="li-icon">📅</div>
+          <div class="li-content">
+            <div class="li-title" id="confirmDate">domingo, 24 de maio</div>
+            <div class="li-meta">Data</div>
+          </div>
+        </div>
+      </div>
+      <div class="stack">
+        <button class="btn btn-primary" onclick="saveService()">✓ Salvar</button>
+        <button class="btn btn-secondary" onclick="show('page-cost')">Mudar valor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Salvo (sucesso)
+       ========================================== -->
+  <div class="page" id="page-saved">
+    <div class="content">
+      <div class="confirm-icon">✓</div>
+      <div class="confirm-title" id="savedTitle">Tudo salvo!</div>
+      <div class="confirm-msg" id="savedMsg">O serviço foi registrado no histórico do carro.</div>
+      <button class="btn btn-primary" onclick="show('page-dash')">Voltar ao início</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Histórico
+       ========================================== -->
+  <div class="page" id="page-history">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-dash')">←</button>
+      <div>
+        <h1>Histórico</h1>
+        <div class="sub" id="histCar">PEX-2A45 — Hilux Branca</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="list-section">
+        <div class="list-title">Maio 2026</div>
+        <div class="list-item readonly">
+          <div class="li-icon">🛢️</div>
+          <div class="li-content">
+            <div class="li-title">Óleo do motor</div>
+            <div class="li-meta">15/05 · João Silva</div>
+          </div>
+          <div class="li-cost">R$ 180</div>
+        </div>
+        <div class="list-item readonly">
+          <div class="li-icon">🧽</div>
+          <div class="li-content">
+            <div class="li-title">Lavagem</div>
+            <div class="li-meta">08/05 · Pedro Souza</div>
+          </div>
+          <div class="li-cost">R$ 45</div>
+        </div>
+      </div>
+      <div class="list-section">
+        <div class="list-title">Abril 2026</div>
+        <div class="list-item readonly">
+          <div class="li-icon ok">⚫</div>
+          <div class="li-content">
+            <div class="li-title">Pneu dianteiro direito</div>
+            <div class="li-meta">22/04 · Marcos Lima</div>
+          </div>
+          <div class="li-cost">R$ 520</div>
+        </div>
+        <div class="list-item readonly">
+          <div class="li-icon">🛞</div>
+          <div class="li-content">
+            <div class="li-title">Pastilha de freio</div>
+            <div class="li-meta">10/04 · João Silva</div>
+          </div>
+          <div class="li-cost">R$ 240</div>
+        </div>
+        <div class="list-item readonly">
+          <div class="li-icon danger">⚠️</div>
+          <div class="li-content">
+            <div class="li-title">Em manutenção (3 dias)</div>
+            <div class="li-meta">02/04 a 04/04 · "Barulho no motor"</div>
+          </div>
+        </div>
+      </div>
+      <div class="list-section">
+        <div class="list-title">Março 2026</div>
+        <div class="list-item readonly">
+          <div class="li-icon">🔋</div>
+          <div class="li-content">
+            <div class="li-title">Bateria nova</div>
+            <div class="li-meta">28/03 · Carlos Mendes</div>
+          </div>
+          <div class="li-cost">R$ 680</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Alertas
+       ========================================== -->
+  <div class="page" id="page-alerts">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-dash')">←</button>
+      <div>
+        <h1>Alertas</h1>
+        <div class="sub">O que precisa atenção</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="alert-card urgent">
+        <div class="ac-head">
+          <div class="ac-title">🛢️ Troca de óleo atrasada</div>
+          <div class="ac-when">há 12 dias</div>
+        </div>
+        <div class="ac-desc">A última troca foi em 15/05. Já passou de 5.000 km.</div>
+        <span class="ac-tag">Urgente</span>
+      </div>
+      <div class="alert-card">
+        <div class="ac-head">
+          <div class="ac-title">⚫ Rodízio de pneus</div>
+          <div class="ac-when">em 5 dias</div>
+        </div>
+        <div class="ac-desc">Programado para 29/05 conforme cadastro de peças.</div>
+        <span class="ac-tag">Em breve</span>
+      </div>
+      <div class="alert-card">
+        <div class="ac-head">
+          <div class="ac-title">💨 Filtro de ar</div>
+          <div class="ac-when">em 14 dias</div>
+        </div>
+        <div class="ac-desc">Última troca: 07/12/2025. Vencimento estimado: 07/06/2026.</div>
+        <span class="ac-tag">Em breve</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-secondary" onclick="show('page-dash')">Voltar</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Observação (voz ou texto)
+       ========================================== -->
+  <div class="page" id="page-observation">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-dash')">←</button>
+      <div>
+        <h1>Mandar observação</h1>
+        <div class="sub">Fale ou escreva o que aconteceu</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="warn-note">
+        <div class="warn-note-icon">⚠️</div>
+        <div>Depois de enviar, a observação <b>não pode ser apagada</b>. Confira antes de mandar.</div>
+      </div>
+      <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">
+        <div class="voice-icon">🎤</div>
+        <div class="voice-label" id="voiceLabel">Tocar para falar</div>
+        <div class="voice-sub" id="voiceSub">Eu transcrevo para texto</div>
+      </button>
+      <div id="transcriptBox" style="display:none">
+        <div class="transcript-bubble">
+          <div class="tb-label">📝 Sua mensagem (transcrita)</div>
+          <div class="tb-text" id="transcriptText"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Ou escreva aqui:</label>
+        <textarea id="obsText" placeholder="Ex: O carro está fazendo um barulho estranho quando freio..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveObservation()">Enviar observação</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Manutenção
+       ========================================== -->
+  <div class="page" id="page-maintenance">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-dash')">←</button>
+      <div>
+        <h1 id="maintTitle">Pôr em manutenção</h1>
+        <div class="sub" id="maintSubTitle">PEX-2A45 — Hilux Branca</div>
+      </div>
+    </div>
+    <div class="content">
+      <div id="maintInactiveView">
+        <div class="toggle-card">
+          <div class="tc-head"><div class="tc-icon">⚠️</div><div class="tc-title">O carro vai parar</div></div>
+          <div class="tc-desc">Quando você marca um carro em manutenção, o gestor recebe um e-mail e o carro fica marcado todo dia até voltar.</div>
+        </div>
+        <div class="field">
+          <label>Por que vai parar?</label>
+          <textarea id="maintReasonText" placeholder="Ex: Motor fazendo barulho, vai para o mecânico..."></textarea>
+          <div class="hint">Ou use o botão de voz abaixo.</div>
+        </div>
+        <button class="voice-btn" onclick="toggleVoiceMaint()" id="voiceBtnMaint">
+          <div class="voice-icon">🎤</div>
+          <div class="voice-label" id="voiceLabelMaint">Falar o motivo</div>
+          <div class="voice-sub">Eu transcrevo para texto</div>
+        </button>
+        <div id="transcriptBoxMaint" style="display:none">
+          <div class="transcript-bubble">
+            <div class="tb-label">📝 Motivo (transcrito)</div>
+            <div class="tb-text" id="transcriptTextMaint"></div>
+          </div>
+        </div>
+        <button class="btn btn-danger" onclick="putInMaintenance()">⚠️ Confirmar: pôr em manutenção</button>
+      </div>
+      <div id="maintActiveView" style="display:none">
+        <div class="toggle-card active">
+          <div class="tc-head"><div class="tc-icon">🛠️</div><div class="tc-title">Em manutenção</div></div>
+          <div class="tc-desc">Este carro está parado desde <b id="maintSince">hoje</b>.</div>
+        </div>
+        <div class="transcript-bubble">
+          <div class="tb-label">Motivo registrado</div>
+          <div class="tb-text" id="maintReason">—</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="readonly-note">
+          <div class="readonly-note-icon">🔒</div>
+          <div>Só o <b>Gestor</b> pode tirar o carro da manutenção. Avise o gestor quando estiver pronto para voltar.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Confirmação de manutenção
+       ========================================== -->
+  <div class="page" id="page-maint-confirm">
+    <div class="content">
+      <div class="confirm-icon alert">!</div>
+      <div class="confirm-title">Carro em manutenção</div>
+      <div class="confirm-msg">
+        Aviso enviado por e-mail para o gestor com o resumo do que você falou.
+        <br><br>
+        <small style="color:var(--ink-soft)">Você vai ver um lembrete todo dia até tirar da manutenção.</small>
+      </div>
+      <button class="btn btn-primary" onclick="show('page-dash')">Voltar ao início</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       Página: Área do Gestor
+       ========================================== -->
+  <div class="page" id="page-admin">
+    <div class="header">
+      <button class="back-btn" onclick="show('page-login'); resetAll()">←</button>
+      <div>
+        <h1>Área do Gestor</h1>
+        <div class="sub">Visão geral da frota</div>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Alerta de manutenção no topo, sempre visível -->
+      <div class="gestor-alert" id="gestorMaintAlert">
+        <div class="ga-head">
+          <div class="ga-icon">⚠️</div>
+          <div class="ga-title">Carros em manutenção</div>
+          <div class="ga-count" id="gestorMaintCount">1</div>
+        </div>
+        <div id="gestorMaintList">
+          <div class="ga-item">
+            <div class="ga-item-title">PEX-3C89 — Saveiro Cinza</div>
+            <div class="ga-item-meta">Parado desde 22/05 · "Vazamento no radiador"</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top: 6px;" onclick="gestorRemoveMaintenance()">✓ Tirar carro da manutenção</button>
+      </div>
+
+      <!-- Carros da frota -->
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-icon">🚗</div>
+          <div class="accordion-title">Carros da frota</div>
+          <div class="accordion-count">4</div>
+          <div class="accordion-arrow">▾</div>
+        </div>
+        <div class="accordion-body">
+          <div class="list-item readonly"><div class="li-icon">🛻</div><div class="li-content"><div class="li-title">PEX-2A45 — Hilux Branca</div><div class="li-meta">Tudo OK · Última troca de óleo: 15/05</div></div><span class="car-status status-ok">OK</span></div>
+          <div class="list-item readonly"><div class="li-icon">🚗</div><div class="li-content"><div class="li-title">PEX-7B12 — Strada Vermelha</div><div class="li-meta">3 alertas pendentes</div></div><span class="car-status status-alert">3 alertas</span></div>
+          <div class="list-item readonly"><div class="li-icon">🚙</div><div class="li-content"><div class="li-title">PEX-3C89 — Saveiro Cinza</div><div class="li-meta">Em manutenção desde 22/05</div></div><span class="car-status status-maint">manutenção</span></div>
+          <div class="list-item readonly"><div class="li-icon">🛻</div><div class="li-content"><div class="li-title">PEX-9D33 — Hilux Preta</div><div class="li-meta">Tudo OK</div></div><span class="car-status status-ok">OK</span></div>
+          <button class="btn btn-ghost" style="margin-top: 12px;" onclick="alert('Tela de adicionar carro novo')">+ Adicionar carro</button>
+        </div>
+      </div>
+
+      <!-- Motoristas -->
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-icon">👥</div>
+          <div class="accordion-title">Motoristas</div>
+          <div class="accordion-count">4</div>
+          <div class="accordion-arrow">▾</div>
+        </div>
+        <div class="accordion-body">
+          <div class="list-item"><div class="li-icon"><div class="avatar" style="width:44px; height:44px; font-size:18px;">JS</div></div><div class="li-content"><div class="li-title">João Silva</div><div class="li-meta">Motorista · PIN cadastrado</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item"><div class="li-icon"><div class="avatar" style="width:44px; height:44px; font-size:18px;">PS</div></div><div class="li-content"><div class="li-title">Pedro Souza</div><div class="li-meta">Motorista · PIN cadastrado</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item"><div class="li-icon"><div class="avatar" style="width:44px; height:44px; font-size:18px;">ML</div></div><div class="li-content"><div class="li-title">Marcos Lima</div><div class="li-meta">Motorista · PIN cadastrado</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item"><div class="li-icon"><div class="avatar" style="width:44px; height:44px; font-size:18px;">CM</div></div><div class="li-content"><div class="li-title">Carlos Mendes</div><div class="li-meta">Motorista · PIN cadastrado</div></div><div class="li-cost">✏️</div></div>
+          <button class="btn btn-ghost" style="margin-top: 12px;" onclick="alert('Tela de cadastrar motorista novo')">+ Cadastrar motorista</button>
+        </div>
+      </div>
+
+      <!-- Peças cadastradas -->
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-icon">🔧</div>
+          <div class="accordion-title">Peças cadastradas</div>
+          <div class="accordion-count">5</div>
+          <div class="accordion-arrow">▾</div>
+        </div>
+        <div class="accordion-body">
+          <div class="list-item" onclick="alert('Tela de editar peça')"><div class="li-icon">🛢️</div><div class="li-content"><div class="li-title">Óleo do motor</div><div class="li-meta">Trocar a cada 5.000 km · 6 meses</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item" onclick="alert('Tela de editar peça')"><div class="li-icon">⚫</div><div class="li-content"><div class="li-title">Pneu</div><div class="li-meta">Trocar a cada 40.000 km · 24 meses</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item" onclick="alert('Tela de editar peça')"><div class="li-icon">🛞</div><div class="li-content"><div class="li-title">Pastilha de freio</div><div class="li-meta">Trocar a cada 25.000 km · 12 meses</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item" onclick="alert('Tela de editar peça')"><div class="li-icon">🔋</div><div class="li-content"><div class="li-title">Bateria</div><div class="li-meta">Trocar a cada 24 meses</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item" onclick="alert('Tela de editar peça')"><div class="li-icon">💨</div><div class="li-content"><div class="li-title">Filtro de ar</div><div class="li-meta">Trocar a cada 15.000 km · 6 meses</div></div><div class="li-cost">✏️</div></div>
+          <button class="btn btn-ghost" style="margin-top: 12px;" onclick="alert('Tela de adicionar peça nova')">+ Adicionar peça</button>
+        </div>
+      </div>
+
+      <!-- E-mails de alerta -->
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <div class="accordion-icon">📧</div>
+          <div class="accordion-title">E-mails de alerta</div>
+          <div class="accordion-count">2</div>
+          <div class="accordion-arrow">▾</div>
+        </div>
+        <div class="accordion-body">
+          <div class="list-item"><div class="li-icon">📧</div><div class="li-content"><div class="li-title">gestor@frota.com.br</div><div class="li-meta">Gestor principal</div></div><div class="li-cost">✏️</div></div>
+          <div class="list-item"><div class="li-icon">📧</div><div class="li-content"><div class="li-title">mecanico@frota.com.br</div><div class="li-meta">Oficina</div></div><div class="li-cost">✏️</div></div>
+          <button class="btn btn-ghost" style="margin-top: 12px;" onclick="alert('Adicionar e-mail')">+ Adicionar e-mail</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Botão da engrenagem (painel de demonstração) -->
+<button class="admin-toggle" onclick="toggleSim()" title="Painel de demonstração">⚙</button>
+<div class="sim-panel" id="simPanel">
+  <h4>Demonstração</h4>
+  <button class="sim-btn" onclick="toggleOffline()">📡 Simular sem internet</button>
+  <button class="sim-btn" onclick="show('page-admin')">👤 Ver tela do gestor</button>
+  <button class="sim-btn" onclick="show('page-login'); resetAll()">🔄 Voltar ao login</button>
+  <button class="sim-btn" onclick="simulateMaintReminder()">🔔 Simular lembrete diário</button>
+</div>
+
+<!-- Biblioteca Supabase (cliente JS) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Configuração + camada de banco + lógica do app -->
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
